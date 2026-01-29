@@ -13,6 +13,7 @@
     "@noqa/api": "workspace:*",
     "@noqa/db": "workspace:*",
     "@noqa/shared": "workspace:*",
+    "@t3-oss/env-core": "^0.13.10",
     "zod": "^4.0.0"
   },
   "devDependencies": {

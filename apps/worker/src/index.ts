@@ -1,8 +1,12 @@
+// Validate environment variables at startup
+import { env } from "./env.js";
+
 import { prisma } from "@noqa/db";
 import { getInternalCaller } from "./lib/trpc-caller.js";
 
 async function main() {
   console.log("🚀 Worker starting...");
+  console.log(`   Environment: ${env.NODE_ENV}`);
 
   // Test database connection
   try {

@@ -7,6 +7,10 @@
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
+    },
+    "./client": {
+      "types": "./node_modules/.prisma/client/index.d.ts",
+      "default": "./node_modules/.prisma/client/index.js"
     }
   },
   "scripts": {

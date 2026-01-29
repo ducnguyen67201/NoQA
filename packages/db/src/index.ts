@@ -1,4 +1,4 @@
-import { PrismaClient } from ".prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
@@ -12,8 +12,11 @@ export const prisma =
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 
-// Re-export everything from generated Prisma Client
-export * from ".prisma/client";
+// Re-export everything from Prisma Client
+export * from "@prisma/client";
+
+// Export Prisma namespace for type helpers
+export { Prisma };
 
 // Export the PrismaClient type for type annotations
 export type { PrismaClient };

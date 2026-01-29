@@ -13,14 +13,8 @@ export function isNonEmptyArray<T>(arr: T[]): arr is NonEmptyArray<T> {
   return arr.length > 0;
 }
 
-// Environment helpers
-export function getEnvOrThrow(key: string): string {
-  const value = process.env[key];
-  if (!value) {
-    throw new Error(`Missing required environment variable: ${key}`);
-  }
-  return value;
-}
-
 // Re-export zod for convenience
 export { z } from "zod";
+
+// Re-export env utilities
+export { createSharedEnv, envSchema } from "./env.js";

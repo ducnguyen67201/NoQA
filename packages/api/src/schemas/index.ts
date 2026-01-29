@@ -40,7 +40,14 @@ export type CreateApiKeyInput = z.infer<typeof CreateApiKeySchema>;
 
 // JSON-compatible value schema for Prisma
 const JsonValueSchema: z.ZodType<unknown> = z.lazy(() =>
-  z.union([z.string(), z.number(), z.boolean(), z.null(), z.array(JsonValueSchema), z.record(z.string(), JsonValueSchema)])
+  z.union([
+    z.string(),
+    z.number(),
+    z.boolean(),
+    z.null(),
+    z.array(JsonValueSchema),
+    z.record(z.string(), JsonValueSchema),
+  ])
 );
 
 export const MetadataSchema = z.record(z.string(), JsonValueSchema).optional();
