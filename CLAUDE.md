@@ -147,14 +147,14 @@ import { Project } from "@prisma/client";
 
 // ✅ GOOD - Use shared packages
 import { type Project, type Document, type ApiKey } from "@noqa/db";
-import { type CreateProjectInput, ProjectStatusSchema } from "@noqa/api/schemas";
+import { type CreateProjectInput, projectStatusSchema } from "@noqa/api/schemas";
 ```
 
 **Available shared packages:**
 | Package | Purpose | Example Imports |
 |---------|---------|-----------------|
 | `@noqa/db` | Database types & Prisma client | `Project`, `Document`, `ApiKey`, `prisma` |
-| `@noqa/api/schemas` | Zod schemas & derived types (client-safe) | `CreateProjectSchema`, `ApiKeySchema` |
+| `@noqa/api/schemas` | Zod schemas & derived types (client-safe) | `createProjectSchema`, `apiKeySchema` |
 | `@noqa/api` | tRPC routers & server utilities | `appRouter`, `createContext` |
 | `@noqa/shared` | Cross-app utilities & constants | Environment configs, shared helpers |
 
@@ -224,28 +224,32 @@ export const ERROR_MESSAGES = {
 
 **Define enums as Zod schemas first, then derive constants and types from them.**
 
+Use **camelCase** for enum values (not UPPER_CASE).
+
 ```typescript
 // ✅ GOOD - Zod schema as source of truth
 // packages/api/src/schemas/project.ts
 import { z } from "zod";
 
-// 1. Define the enum schema
-export const ProjectStatusSchema = z.enum(["ACTIVE", "ARCHIVED", "DELETED"]);
+// 1. Define the enum values array
+const projectStatus = ["active", "archived", "deleted"] as const;
 
-// 2. Derive the type from schema
-export type ProjectStatus = z.infer<typeof ProjectStatusSchema>;
+// 2. Create Zod schema from the array
+export const projectStatusSchema = z.enum(projectStatus);
 
-// 3. Export the values as a constant array
-export const PROJECT_STATUS = ProjectStatusSchema.options;
-// Result: readonly ["ACTIVE", "ARCHIVED", "DELETED"]
+// 3. Derive the type from schema
+export type ProjectStatus = z.infer<typeof projectStatusSchema>;
 
 // Usage in code
-const status: ProjectStatus = "ACTIVE";  // Type-safe
-PROJECT_STATUS.forEach(s => console.log(s));  // Iterate values
-ProjectStatusSchema.parse(input);  // Runtime validation
+const status: ProjectStatus = "active";  // Type-safe
+projectStatus.forEach(s => console.log(s));  // Iterate values
+projectStatusSchema.parse(input);  // Runtime validation
 
-// ❌ BAD - Hardcoded constants without schema
-export const PROJECT_STATUS = ["ACTIVE", "ARCHIVED", "DELETED"] as const;
+// ❌ BAD - UPPER_CASE values
+export const ProjectStatusSchema = z.enum(["ACTIVE", "ARCHIVED", "DELETED"]);
+
+// ❌ BAD - Hardcoded without Zod
+export const PROJECT_STATUS = ["active", "archived", "deleted"] as const;
 export type ProjectStatus = typeof PROJECT_STATUS[number];
 ```
 
@@ -255,26 +259,37 @@ export type ProjectStatus = typeof PROJECT_STATUS[number];
 // packages/api/src/schemas/roles.ts
 import { z } from "zod";
 
-// Define enum schema
-export const ProjectRoleSchema = z.enum(["OWNER", "ADMIN", "MEMBER", "VIEWER"]);
-export type ProjectRole = z.infer<typeof ProjectRoleSchema>;
+// Define enum values (camelCase)
+const projectRole = ["owner", "admin", "member", "viewer"] as const;
 
-// Export all values
-export const PROJECT_ROLES = ProjectRoleSchema.options;
+// Create Zod schema
+export const projectRoleSchema = z.enum(projectRole);
 
-// Derive subsets from schema
-export const ADMIN_ROLES: readonly ProjectRole[] = ["OWNER", "ADMIN"];
-export const WRITE_ROLES: readonly ProjectRole[] = ["OWNER", "ADMIN", "MEMBER"];
+// Derive type
+export type ProjectRole = z.infer<typeof projectRoleSchema>;
+
+// Derive subsets from the values
+export const adminRoles: readonly ProjectRole[] = ["owner", "admin"];
+export const writeRoles: readonly ProjectRole[] = ["owner", "admin", "member"];
 
 // Validation helpers
 export const isValidRole = (role: string): role is ProjectRole => {
-  return ProjectRoleSchema.safeParse(role).success;
+  return projectRoleSchema.safeParse(role).success;
 };
 
 export const isAdminRole = (role: ProjectRole): boolean => {
-  return ADMIN_ROLES.includes(role);
+  return adminRoles.includes(role);
 };
 ```
+
+### Naming Convention Summary
+
+| Item | Convention | Example |
+|------|------------|---------|
+| Enum values array | camelCase | `const projectStatus = ["active", ...]` |
+| Zod schema | camelCase + Schema | `projectStatusSchema` |
+| Type | PascalCase | `type ProjectStatus` |
+| Derived subsets | camelCase | `adminRoles`, `writeRoles` |
 
 ## Zod Schemas as Source of Truth
 
@@ -283,6 +298,10 @@ export const isAdminRole = (role: ProjectRole): boolean => {
 - **Never hardcode constants for enums/unions** - Define as Zod schema, derive from it
 - **Export both schema and inferred type**
 - **Client components**: Import from `@noqa/api/schemas` (NOT `@noqa/api`)
+- **Naming conventions**:
+  - Schema names: `camelCase` + Schema suffix → `projectStatusSchema`, `createUserSchema`
+  - Type names: `PascalCase` → `ProjectStatus`, `CreateUserInput`
+  - Enum values: `camelCase` → `["active", "archived"]`, NOT `["ACTIVE", "ARCHIVED"]`
 
 ## Zod for Runtime Validation (CRITICAL - MANDATORY)
 
@@ -570,10 +589,11 @@ Routers are thin. Business logic lives in services.
 // ✅ GOOD - Thin router + service
 // routers/project.ts
 import { ProjectService } from "../services/project.service";
+import { createProjectSchema } from "../schemas/project";
 
 export const projectRouter = router({
   create: protectedProcedure
-    .input(CreateProjectSchema)
+    .input(createProjectSchema)
     .mutation(async ({ ctx, input }) => {
       return ProjectService.create(ctx.db, ctx.user, input);
     }),
@@ -610,25 +630,25 @@ export class ProjectService {
 // schemas/project.ts
 import { z } from "zod";
 
-// Enum schemas
-export const ProjectStatusSchema = z.enum(["ACTIVE", "ARCHIVED", "DELETED"]);
-export type ProjectStatus = z.infer<typeof ProjectStatusSchema>;
-export const PROJECT_STATUS = ProjectStatusSchema.options;
+// Enum schemas (camelCase values, camelCase schema name)
+const projectStatus = ["active", "archived", "deleted"] as const;
+export const projectStatusSchema = z.enum(projectStatus);
+export type ProjectStatus = z.infer<typeof projectStatusSchema>;
 
-// Input schemas
-export const CreateProjectSchema = z.object({
+// Input schemas (camelCase schema name)
+export const createProjectSchema = z.object({
   name: z.string().min(1).max(100),
   slug: z.string().min(1).max(50).regex(/^[a-z0-9-]+$/),
   description: z.string().max(500).optional(),
 });
 
-export const UpdateProjectSchema = CreateProjectSchema.partial().extend({
+export const updateProjectSchema = createProjectSchema.partial().extend({
   projectId: z.string(),
 });
 
-// Derived types
-export type CreateProjectInput = z.infer<typeof CreateProjectSchema>;
-export type UpdateProjectInput = z.infer<typeof UpdateProjectSchema>;
+// Derived types (PascalCase)
+export type CreateProjectInput = z.infer<typeof createProjectSchema>;
+export type UpdateProjectInput = z.infer<typeof updateProjectSchema>;
 ```
 
 ---
@@ -711,7 +731,9 @@ export function ProjectDetailPage({ projectId }: Props) {
 | Rule | What to Do | What NOT to Do |
 |------|-----------|----------------|
 | **Types** | Import from `@noqa/db`, `@noqa/api/schemas` | Duplicate types, import from `@prisma/client` |
-| **Enums** | Use Zod schema, derive type & constants | Hardcode arrays with `as const` |
+| **Enums** | Use Zod schema with camelCase values | UPPER_CASE values, hardcode with `as const` |
+| **Schema Names** | camelCase: `projectStatusSchema` | PascalCase: `ProjectStatusSchema` |
+| **Type Names** | PascalCase: `ProjectStatus` | camelCase: `projectStatus` |
 | **Unknown Data** | Use Zod `safeParse()` | Type assertions (`as`) |
 | **UI** | Use shadcn/ui from `@/components/ui/` | Custom CSS for standard elements |
 | **Frontend** | < 150 lines, logic in hooks | Fat components, inline logic |
