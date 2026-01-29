@@ -1,0 +1,35 @@
+{
+  "name": "noqa",
+  "private": true,
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "build": "turbo build",
+    "dev": "turbo dev",
+    "dev:web": "turbo dev --filter=@noqa/web",
+    "dev:worker": "turbo dev --filter=@noqa/worker",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "lint:web": "biome check apps/web",
+    "lint:worker": "biome check apps/worker",
+    "format": "biome format --write .",
+    "typecheck": "turbo typecheck",
+    "typecheck:web": "turbo typecheck --filter=@noqa/web",
+    "typecheck:worker": "turbo typecheck --filter=@noqa/worker",
+    "clean": "turbo clean && rm -rf node_modules",
+    "db:generate": "pnpm --filter @noqa/db generate",
+    "db:push": "pnpm --filter @noqa/db push",
+    "db:migrate": "pnpm --filter @noqa/db migrate",
+    "db:migrate:deploy": "pnpm --filter @noqa/db migrate:deploy",
+    "db:studio": "pnpm --filter @noqa/db studio",
+    "db:reset": "pnpm --filter @noqa/db reset"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@types/node": "^22.10.0",
+    "turbo": "^2.5.0",
+    "typescript": "^5.7.2"
+  }
+}

@@ -1,0 +1,136 @@
+generator client {
+  provider        = "prisma-client-js"
+  output          = "../node_modules/.prisma/client"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  extensions = [vector]
+}
+
+// ============================================================================
+// User & Auth
+// ============================================================================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts Account[]
+  sessions Session[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ============================================================================
+// Projects & Resources
+// ============================================================================
+
+model Project {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  apiKeys   ApiKey[]
+  documents Document[]
+
+  @@map("projects")
+}
+
+model ApiKey {
+  id        String    @id @default(cuid())
+  name      String
+  key       String    @unique
+  projectId String
+  createdAt DateTime  @default(now())
+  expiresAt DateTime?
+  revokedAt DateTime?
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("api_keys")
+}
+
+// ============================================================================
+// Documents & Embeddings
+// ============================================================================
+
+model Document {
+  id        String   @id @default(cuid())
+  projectId String
+  title     String
+  content   String   @db.Text
+  metadata  Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime  @updatedAt
+
+  project Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  chunks  DocumentChunk[]
+
+  @@index([projectId])
+  @@map("documents")
+}
+
+model DocumentChunk {
+  id         String                       @id @default(cuid())
+  documentId String
+  content    String                       @db.Text
+  embedding  Unsupported("vector(1536)")?
+  metadata   Json?
+  createdAt  DateTime                     @default(now())
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+  @@map("document_chunks")
+}
